@@ -1,0 +1,73 @@
+/*  Positioning the wrapper so that the cube appears in the middle of the
+    window. Perspective view set */
+#cube-wrapper {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  perspective: 1000px;
+}
+
+.cube {
+	position: relative;
+	transform-style: preserve-3d;
+}
+
+/* Size and border color for each face */
+.face {
+	position: absolute;
+	width: 200px;
+	height: 200px;
+  border: solid green 3px;
+}
+
+/* Transforming every face into their correct positions */
+#front_face {
+	transform: translateX(-100px) translateY(-100px) translateZ(100px);
+}
+
+#back_face {
+	transform: translateX(-100px) translateY(-100px) translateZ(-100px);
+}
+#right_face {
+	transform: translateY(-100px) rotateY(90deg);
+}
+#left_face {
+  transform: translateY(-100px) translateX(-200px) rotateY(90deg);
+}
+#top_face {
+  transform: translateX(-100px) translateY(-200px) rotateX(90deg);
+}
+#bottom_face {
+  transform: translateX(-100px) rotateX(90deg);
+}
+
+/* Animation for X axis spin */
+@keyframes spinX {
+	from { transform: rotateX(0); }
+	to { transform: rotateX(360deg); }
+}
+
+/* Animation for Y axis spin */
+@keyframes spinY {
+	from { transform: rotateY(0); }
+	to { transform: rotateY(360deg); }
+}
+
+/* Animation for Z axis spin */
+@keyframes spinZ {
+	from { transform: rotateZ(0); }
+	to { transform: rotateZ(360deg); }
+}
+
+/* Applying each animation to each the cube div */
+#cubeX {
+  animation: spinX 5s infinite linear;
+}
+
+#cubeY {
+	animation: spinY 5s infinite linear;
+}
+
+#cubeZ {
+	animation: spinZ 5s infinite linear;
+}
