@@ -4,7 +4,7 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  perspective: 1500px;
+  /*perspective: 1500px;*/
 }
 
 .cube {
@@ -23,22 +23,28 @@
 /* Transforming every face into their correct positions */
 #front_face {
 	transform: translateX(-100px) translateY(-100px) translateZ(100px);
+	background-color: #0000FF
 }
 
 #back_face {
 	transform: translateX(-100px) translateY(-100px) translateZ(-100px);
+	background-color: #0000AA
 }
 #right_face {
 	transform: translateY(-100px) rotateY(90deg);
+	background-color: #000066
 }
 #left_face {
   transform: translateY(-100px) translateX(-200px) rotateY(90deg);
+	background-color: #00FF66
 }
 #top_face {
   transform: translateX(-100px) translateY(-200px) rotateX(90deg);
+	background-color: #00AA66
 }
 #bottom_face {
   transform: translateX(-100px) rotateX(90deg);
+	background-color: #006666
 }
 
 /* Animation for X, Y and Z axis spin */
@@ -49,5 +55,5 @@
 
 /* Applying animation to the cube */
 .cube{
-	animation: spinXYZ 5s infinite linear;
+
 }
