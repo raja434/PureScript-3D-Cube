@@ -23,28 +23,28 @@
 /* Transforming every face into their correct positions */
 #front_face {
 	transform: translateX(-100px) translateY(-100px) translateZ(100px);
-	background-color: #0000FF
+	background-color: #00FF00;
 }
 
 #back_face {
 	transform: translateX(-100px) translateY(-100px) translateZ(-100px);
-	background-color: #0000AA
+	background-color: #0000FF;
 }
 #right_face {
 	transform: translateY(-100px) rotateY(90deg);
-	background-color: #000066
+	background-color: #FF0000;
 }
 #left_face {
   transform: translateY(-100px) translateX(-200px) rotateY(90deg);
-	background-color: #00FF66
+	background-color: #FF9900;
 }
 #top_face {
   transform: translateX(-100px) translateY(-200px) rotateX(90deg);
-	background-color: #00AA66
+	background-color: #FFFFFF;
 }
 #bottom_face {
   transform: translateX(-100px) rotateX(90deg);
-	background-color: #006666
+	background-color: #FFFF00;
 }
 
 /* Animation for X, Y and Z axis spin */

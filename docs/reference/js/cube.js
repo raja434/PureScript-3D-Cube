@@ -1,13 +1,16 @@
 var lastX;
 var lastY;
-var rotation = {x: 0, y: 0, angle: 0};
 var matrix3d = rotate(0,0,0);
 var newMatrix;
 $(document).ready(function() {
   $('body').on('mousedown', function(event) {
     $('body').on('mouseup', function() {
       $('body').off('mousemove');
-      matrix3d = newMatrix;
+      m = $('.cube').css('transform');
+      if(m.match(/matrix3d/) == null)
+        matrix3d = rotate(0,0,0);
+      else
+        matrix3d = stringToMatrix(m.substring(8,m.length));
     });
 
     lastX=event.pageX;
@@ -17,20 +20,10 @@ $(document).ready(function() {
 
       var r = {x: event.pageX - lastX, y: event.pageY - lastY};
       r.angle = Math.sqrt(r.x*r.x + r.y*r.y);
-
-      // var newRotation = {
-      //   x: rotation.x + r.x,
-      //   y: rotation.y + r.y,
-      //   angle: Math.sqrt(Math.pow(rotation.x+r.x,2) + Math.pow(rotation.y+r.y,2))
-      // }
-      // newRotation.x = newRotation.x / Math.sqrt(Math.pow(newRotation.x,2)+Math.pow(newRotation.y,2));
-      // newRotation.y = newRotation.y / Math.sqrt(Math.pow(newRotation.x,2)+Math.pow(newRotation.y,2));
-      //rotation = newRotation;
-      $('.cube').css({transform: "rotate3d("+(-r.y)+","+r.x+",0,"+r.angle+"deg)"});
-      var str = $('.cube').css('transform');
-      str = str.substring(8,str.length);
-      newMatrix = multiply(matrix3d, stringToMatrix(str));
-      $('.cube').css('transform',"matrix3d" + matrixToString(newMatrix));
+      rotate3d = multiply(matrix3d, [[-r.y],[r.x],[0],[r.angle]]);
+      var str = 'matrix3d' + matrixToString(matrix3d)
+            + ' rotate3d(' + rotate3d[0][0] + ', ' + rotate3d[1][0] + ', ' + rotate3d[2][0] + ', ' + rotate3d[3][0] + 'deg)';
+      $('.cube').css('transform',str);
     });
   });
 });
@@ -49,7 +42,7 @@ function matrixToString(matrix) {
   for(i=0; i<matrix.length; i++) {
     for(j=0; j<matrix[i].length; j++) {
       s+=matrix[i][j];
-      if(i<matrix.length-1 || j<matrix.length-1) s+=", ";
+      if(i<matrix.length-1 || j<matrix[i].length-1) s+=", ";
     }
   }
   return s+")";
