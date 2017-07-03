@@ -9,7 +9,10 @@
   "dependencies": {
     "purescript-prelude": "^3.0.0",
     "purescript-console": "^3.0.0",
-    "purescript-jquery": "^4.2.1"
+    "purescript-jquery": "^4.2.1",
+    "purescript-matrices": "^3.0.0",
+    "purescript-numbers": "^5.0.0",
+    "purescript-linear-algebra": "^0.4.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^3.0.0"

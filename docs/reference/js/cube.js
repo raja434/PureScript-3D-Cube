@@ -18,9 +18,9 @@ $(document).ready(function() {
 
     $('body').on('mousemove', function (event) {
 
-      var r = {x: event.pageX - lastX, y: event.pageY - lastY};
+      var r = {x: -(event.pageY - lastY), y: event.pageX - lastX};
       r.angle = Math.sqrt(r.x*r.x + r.y*r.y);
-      rotate3d = multiply(matrix3d, [[-r.y],[r.x],[0],[r.angle]]);
+      rotate3d = multiply(matrix3d, [[r.x],[r.y],[0],[r.angle]]);
       var str = 'matrix3d' + matrixToString(matrix3d)
             + ' rotate3d(' + rotate3d[0][0] + ', ' + rotate3d[1][0] + ', ' + rotate3d[2][0] + ', ' + rotate3d[3][0] + 'deg)';
       $('.cube').css('transform',str);
