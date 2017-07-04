@@ -15,7 +15,7 @@ import Data.Array (replicate, snoc)
 import Data.Array.Partial (tail)
 import Data.Int (toNumber)
 import Math (sqrt)
-import Matrices (RotationVector, TransformMatrix, angle, average, changeSpeed, multiply, noRotation, noTransformation, rotationVector, sum, toString, toTransformMatrix)
+import Matrices (RotationVector, TransformMatrix, angle, average, changeSpeed, multiply, noRotation, rotationVector, sum, toString, toTransformMatrix)
 import Partial.Unsafe (unsafePartial)
 
 
@@ -122,6 +122,8 @@ drawCube = do
     border : "solid black 3px"
   } face
 
+  css { transform: "rotateX(-45deg)rotateY(45deg)"} cube
+
 
 startSpeedometer :: forall eff h. STRef h RotationVector
   -> STRef h { x::Number, y::Number } -> STRef h Boolean
@@ -220,7 +222,9 @@ startSpinner transformRef velocityRef = do
 
 run :: forall e h. Eff (dom :: DOM, st :: ST h, timer :: TIMER, console :: CONSOLE | e) Unit
 run = do
-  transformRef <- newSTRef noTransformation
+  cube <- select ".cube"
+  t <- getCss "transform" cube
+  transformRef <- newSTRef $ toTransformMatrix t
   velocityRef <- newSTRef noRotation
   startSpinner transformRef velocityRef
   startMouseHandlers transformRef velocityRef
