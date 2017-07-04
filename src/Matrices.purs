@@ -7,9 +7,8 @@ import Data.Foldable (foldl)
 import Data.Maybe (fromMaybe)
 import Data.Number (fromString)
 import Data.String (Pattern(..), contains, split, stripPrefix, stripSuffix)
-import LinearAlgebra.Matrix (Matrix, fromArray, identity, rows)
+import LinearAlgebra.Matrix (Matrix, element, fromArray, identity, rows)
 import LinearAlgebra.Matrix (multiply) as M
-
 
 
 newtype RotationVector = RotationVector (Matrix Number)
@@ -27,7 +26,6 @@ noRotation = RotationVector (fromMaybe (identity 1)
   (fromArray 4 1 [0.0, 0.0, 0.0, 0.0]))
 
 
-
 newtype TransformMatrix = TransformMatrix (Matrix Number)
 
 transformMatrix :: Array Number -> TransformMatrix
@@ -41,7 +39,6 @@ transformMatrix a =
 noTransformation :: TransformMatrix
 noTransformation = TransformMatrix (fromMaybe (identity 1)
   (fromArray 4 4 [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0]))
-
 
 
 class MatrixToString a where
@@ -62,7 +59,6 @@ instance rotationVectorToString :: MatrixToString RotationVector where
     <> "deg)"
 
 
-
 toTransformMatrix :: String -> TransformMatrix
 toTransformMatrix str =
   case contains (Pattern "matrix3d(") str of
@@ -79,6 +75,8 @@ toTransformMatrix str =
   _ -> noTransformation
 
 
-
 multiply :: TransformMatrix -> RotationVector -> RotationVector
 multiply (TransformMatrix mt) (RotationVector v) = RotationVector (M.multiply mt v)
+
+angle :: RotationVector -> Number
+angle (RotationVector m) = fromMaybe 0.0 $ element 3 0 m

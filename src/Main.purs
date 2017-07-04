@@ -3,12 +3,18 @@ module Main where
 import Prelude
 
 import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.JQuery (addClass, body, create, css, getPageX, getPageY, on, off, select, setAttr)
+import Control.Monad.Eff.JQuery (addClass, body, create, css, getCss, getPageX, getPageY, off, on, select, setAttr)
 import Control.Monad.Eff.JQuery (append) as JQ
 import Control.Monad.ST (ST, STRef, newSTRef, readSTRef, writeSTRef)
 import DOM (DOM)
 import DOM.HTML (window)
 import DOM.HTML.Window (requestAnimationFrame)
+import Math (sqrt)
+import Matrices (RotationVector, TransformMatrix, multiply, noRotation, noTransformation, angle, rotationVector, toString, toTransformMatrix)
+
+
+framesPerSecond :: Number
+framesPerSecond = 60.0
 
 
 drawCube :: forall e. Eff (dom :: DOM |e) Unit
@@ -85,6 +91,8 @@ drawCube = do
   body <- body
   JQ.append cubeWrapper body
 
+  css { width: "100%", height: "100%" } body
+
   face <- select ".face"
   css {
   	position : "absolute",
@@ -95,75 +103,69 @@ drawCube = do
   } face
 
 
-rotateCube :: forall h e. STRef h {x::Number, y::Number}
-  -> {x::Number, y::Number}
-  -> Eff (dom :: DOM, st :: ST h |e) Unit
-rotateCube angleRef newAngle = do
+rotateCube :: forall h e. STRef h TransformMatrix
+  -> RotationVector
+  -> Eff (dom :: DOM, st:: ST h |e) Unit
+rotateCube transformRef rotation = do
   cube <- select ".cube"
-  angle <- readSTRef angleRef
+  transform <- readSTRef transformRef
   css {
-    transform: "rotateX(" <> show(newAngle.x) <> "deg)"
-                  <> " rotateY(" <> show(newAngle.y) <> "deg)"
+    transform: "matrix3d" <> toString transform
+                  <> " rotate3d" <> (toString $ multiply transform rotation)
   } cube
-  void $ writeSTRef angleRef newAngle
 
 
-startMouseHandlers :: forall h e. STRef h {x::Number, y::Number}
-  -> STRef h {x::Number, y::Number}
+startMouseHandlers :: forall h e. STRef h TransformMatrix
+  -> STRef h RotationVector
   -> Eff (dom :: DOM, st :: ST h | e) Unit
-startMouseHandlers angleRef velocityRef = do
-  lastMousePos <- newSTRef {x: 0.0, y: 0.0}
+startMouseHandlers transformRef velocityRef = do
   body <- body
-  let moveHandler event jq = do
-        x <- getPageX event
-        y <- getPageY event
-        lastPos <- readSTRef lastMousePos
-        angle <- readSTRef angleRef
-        let newAngle = {
-              x: angle.x + negate (y - lastPos.y),
-              y: angle.y + x - lastPos.x
-            }
-        rotateCube angleRef newAngle
-        void $ writeSTRef lastMousePos {x: x, y: y}
-  let upHandler event jq = do
-        off "mousemove" body
   let downHandler event jq = do
-        lastX <- getPageX event
-        lastY <- getPageY event
-        void $ writeSTRef lastMousePos {x: lastX, y: lastY}
+        downX <- getPageX event
+        downY <- getPageY event
+        let moveHandler event' jq' = do
+              x <- getPageX event'
+              y <- getPageY event'
+              let dx = negate (y - downY)
+              let dy = x - downX
+              let rotation = rotationVector [dx, dy, 0.0,
+                    sqrt (dx * dx + dy * dy)]
+              rotateCube transformRef rotation
+        let upHandler event' jq' = do
+              cube <- select ".cube"
+              off "mousemove" body
+              t <- getCss "transform" cube
+              writeSTRef transformRef (toTransformMatrix t)
         on "mousemove" moveHandler body
         on "mouseup" upHandler body
-  css {
-    width: "100%",
-    height: "100%"
-  } body
   on "mousedown" downHandler body
 
 
-startSpinner :: forall h e. STRef h {x::Number, y::Number}
-  -> STRef h {x::Number, y::Number}
+startSpinner :: forall h e. STRef h TransformMatrix
+  -> STRef h RotationVector
   -> Eff (dom :: DOM, st :: ST h | e) Unit
-startSpinner angleRef velocityRef = do
+startSpinner transformRef velocityRef = do
   let spinner = do
-        vel <- readSTRef velocityRef
-        angle <- readSTRef angleRef
-        let
-          newAngle = {
-            x: angle.x + (vel.x / 60.0),
-            y: angle.y + (vel.y / 60.0)
-          }
-        rotateCube angleRef newAngle
-        w <- window
-        void $ requestAnimationFrame spinner w
+        rotation <- readSTRef velocityRef
+        if angle rotation /= 0.0
+          then do
+            rotateCube transformRef rotation
+            cube <- select ".cube"
+            t <- getCss "transform" cube
+            void $ writeSTRef transformRef (toTransformMatrix t)
+            w <- window
+            void $ requestAnimationFrame spinner w
+          else pure unit
   spinner
 
 
 run :: forall e h. Eff (dom :: DOM, st :: ST h | e) Unit
 run = do
-  angleRef <- newSTRef { x: 0.0, y: 0.0 }
-  velocityRef <- newSTRef { x: 0.0, y: 0.0 }
-  startSpinner angleRef velocityRef
-  startMouseHandlers angleRef velocityRef
+  transformRef <- newSTRef noTransformation
+  velocityRef <- newSTRef $ noRotation
+  startSpinner transformRef velocityRef
+  startMouseHandlers transformRef velocityRef
+  pure unit
 
 
 main :: forall h e. Eff (dom :: DOM, st :: ST h | e) Unit
