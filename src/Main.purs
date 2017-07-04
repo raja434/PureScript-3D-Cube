@@ -3,18 +3,29 @@ module Main where
 import Prelude
 
 import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.JQuery (addClass, body, create, css, getCss, getPageX, getPageY, off, on, select, setAttr)
 import Control.Monad.Eff.JQuery (append) as JQ
+import Control.Monad.Eff.Timer (TIMER, setTimeout)
 import Control.Monad.ST (ST, STRef, newSTRef, readSTRef, writeSTRef)
 import DOM (DOM)
 import DOM.HTML (window)
 import DOM.HTML.Window (requestAnimationFrame)
+import Data.Array (replicate, snoc)
+import Data.Array.Partial (tail)
 import Math (sqrt)
-import Matrices (RotationVector, TransformMatrix, multiply, noRotation, noTransformation, angle, rotationVector, toString, toTransformMatrix)
+import Matrices (RotationVector, TransformMatrix, angle, average, multiply, noRotation, noTransformation, rotationVector, sum, toString, toTransformMatrix)
+import Partial.Unsafe (unsafePartial)
 
 
 framesPerSecond :: Number
 framesPerSecond = 60.0
+
+speedSensitivity :: Int
+speedSensitivity = 25
+
+rotationScale :: Number
+rotationScale = 0.4
 
 
 drawCube :: forall e. Eff (dom :: DOM |e) Unit
@@ -47,23 +58,29 @@ drawCube = do
   addClass "cube" cube
 
   css {
-  	transform : "translateX(-100px) translateY(-100px) translateZ(100px)"
+  	transform : "translateX(-100px) translateY(-100px) translateZ(100px)",
+    backgroundColor: "#49f441"
   } frontFace
 
   css {
-  	transform : "translateX(-100px) translateY(-100px) translateZ(-100px)"
+  	transform : "translateX(-100px) translateY(-100px) translateZ(-100px)",
+    backgroundColor: "#457ef9"
   } backFace
   css {
-  	transform : "translateY(-100px) rotateY(90deg)"
+  	transform : "translateY(-100px) rotateY(90deg)",
+    backgroundColor: "#ef3737"
   } rightFace
   css {
-    transform : "translateY(-100px) translateX(-200px) rotateY(90deg)"
+    transform : "translateY(-100px) translateX(-200px) rotateY(90deg)",
+    backgroundColor: "#ffaa19"
   } leftFace
   css {
-    transform : "translateX(-100px) translateY(-200px) rotateX(90deg)"
+    transform : "translateX(-100px) translateY(-200px) rotateX(90deg)",
+    backgroundColor: "#f7fff7"
   } topFace
   css {
-    transform : "translateX(-100px) rotateX(90deg)"
+    transform : "translateX(-100px) rotateX(90deg)",
+    backgroundColor: "#ffff44"
   } bottomFace
 
   css {
@@ -98,14 +115,37 @@ drawCube = do
   	position : "absolute",
   	width : "200px",
   	height : "200px",
-    border : "solid green 3px",
-    backgroundColor : "rgba(0, 192, 255, 0.17)"
+    border : "solid black 3px"
   } face
+
+
+startSpeedometer :: forall eff h. STRef h RotationVector
+  -> STRef h { x::Number, y::Number } -> STRef h Boolean
+  -> Eff (dom :: DOM, st :: ST h, timer :: TIMER, console :: CONSOLE  | eff) Unit
+startSpeedometer velocityRef mousePosRef runFlagRef = do
+  let looper prevPos velocities = do
+        let speedometer = do
+              pos <- readSTRef mousePosRef
+              let r = rotationVector [
+                (negate (pos.y - prevPos.y)) * rotationScale,
+                (pos.x - prevPos.x) * rotationScale,
+                0.0, 0.0
+              ]
+              let newVels = snoc (unsafePartial tail velocities) r
+              runFlag <- readSTRef runFlagRef
+              if runFlag then looper pos newVels
+                else do
+                  currentVelocity <- readSTRef velocityRef
+                  void $ writeSTRef velocityRef (sum [average newVels, currentVelocity])
+                -- else log $ toString (average newVels)
+        void $ setTimeout speedSensitivity (speedometer)
+  p <- readSTRef mousePosRef
+  looper p (replicate 5 noRotation)
 
 
 rotateCube :: forall h e. STRef h TransformMatrix
   -> RotationVector
-  -> Eff (dom :: DOM, st:: ST h |e) Unit
+  -> Eff (dom :: DOM, st:: ST h |e) TransformMatrix
 rotateCube transformRef rotation = do
   cube <- select ".cube"
   transform <- readSTRef transformRef
@@ -113,31 +153,40 @@ rotateCube transformRef rotation = do
     transform: "matrix3d" <> toString transform
                   <> " rotate3d" <> (toString $ multiply transform rotation)
   } cube
+  t <- getCss "transform" cube
+  pure (toTransformMatrix t)
 
 
 startMouseHandlers :: forall h e. STRef h TransformMatrix
   -> STRef h RotationVector
-  -> Eff (dom :: DOM, st :: ST h | e) Unit
+  -> Eff (dom :: DOM, st :: ST h, timer :: TIMER, console :: CONSOLE | e) Unit
 startMouseHandlers transformRef velocityRef = do
   body <- body
+  mousePosRef <- newSTRef {x:0.0,y:0.0}
   let downHandler event jq = do
         downX <- getPageX event
         downY <- getPageY event
+        void $ writeSTRef mousePosRef {x: downX, y:downY}
+        runFlagRef <- newSTRef true
+        void $ writeSTRef velocityRef noRotation
         let moveHandler event' jq' = do
               x <- getPageX event'
               y <- getPageY event'
+              void $ writeSTRef mousePosRef {x: x, y:y}
               let dx = negate (y - downY)
               let dy = x - downX
               let rotation = rotationVector [dx, dy, 0.0,
-                    sqrt (dx * dx + dy * dy)]
+                    sqrt (dx * dx + dy * dy) * rotationScale]
               rotateCube transformRef rotation
         let upHandler event' jq' = do
               cube <- select ".cube"
               off "mousemove" body
               t <- getCss "transform" cube
-              writeSTRef transformRef (toTransformMatrix t)
+              void $ writeSTRef transformRef (toTransformMatrix t)
+              writeSTRef runFlagRef false
         on "mousemove" moveHandler body
         on "mouseup" upHandler body
+        startSpeedometer velocityRef mousePosRef runFlagRef
   on "mousedown" downHandler body
 
 
@@ -149,26 +198,24 @@ startSpinner transformRef velocityRef = do
         rotation <- readSTRef velocityRef
         if angle rotation /= 0.0
           then do
-            rotateCube transformRef rotation
-            cube <- select ".cube"
-            t <- getCss "transform" cube
-            void $ writeSTRef transformRef (toTransformMatrix t)
-            w <- window
-            void $ requestAnimationFrame spinner w
+            t <- rotateCube transformRef rotation
+            void $ writeSTRef transformRef t
           else pure unit
+        w <- window
+        void $ requestAnimationFrame spinner w
   spinner
 
 
-run :: forall e h. Eff (dom :: DOM, st :: ST h | e) Unit
+run :: forall e h. Eff (dom :: DOM, st :: ST h, timer :: TIMER, console :: CONSOLE | e) Unit
 run = do
   transformRef <- newSTRef noTransformation
-  velocityRef <- newSTRef $ noRotation
+  velocityRef <- newSTRef (rotationVector [0.0,-1.0,0.0,10.0/framesPerSecond])
   startSpinner transformRef velocityRef
   startMouseHandlers transformRef velocityRef
   pure unit
 
 
-main :: forall h e. Eff (dom :: DOM, st :: ST h | e) Unit
+main :: forall h e. Eff (dom :: DOM, st :: ST h, timer :: TIMER, console :: CONSOLE | e) Unit
 main = do
   drawCube
   run
