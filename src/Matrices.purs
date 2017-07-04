@@ -89,13 +89,17 @@ sum vs = foldl (\acc v -> add acc v) noRotation vs
 average :: Array (RotationVector) -> RotationVector
 average vs = do
   let (RotationVector sum) = sum vs
-  let x = fromMaybe 0.0 (element 0 0 sum)
-  let y = fromMaybe 0.0 (element 1 0 sum)
-  let mag = (fromMaybe 0.0 (element 3 0 sum)) / toNumber (length vs)
+  let s = (fromMaybe 0.0 (element 3 0 sum)) / toNumber (length vs)
+  changeSpeed s (RotationVector sum)
+
+changeSpeed :: Number -> RotationVector -> RotationVector
+changeSpeed s (RotationVector v) = do
+  let x = fromMaybe 0.0 (element 0 0 v)
+  let y = fromMaybe 0.0 (element 1 0 v)
   let a = if y == 0.0 then 0.0 else if x == 0.0 then pi / 2.0 else atan (abs(y / x))
   rotationVector [
-    (mag * cos a) * (if x < 0.0 then -1.0 else 1.0),
-    (mag * sin a) * (if y < 0.0 then -1.0 else 1.0),
+    (s * cos a) * (if x < 0.0 then -1.0 else 1.0),
+    (s * sin a) * (if y < 0.0 then -1.0 else 1.0),
     0.0,
-    mag
+    s
   ]

@@ -700,6 +700,17 @@ var PS = {};
     };
   };
 
+  var replicatePolyfill = function (count) {
+    return function (value) {
+      var result = [];
+      var n = 0;
+      for (var i = 0; i < count; i++) {
+        result[n++] = value;
+      }
+      return result;
+    };
+  };
+
   // In browsers that have Array.prototype.fill we use it, as it's faster.
   exports.replicate = typeof Array.prototype.fill === "function" ?
       replicate :
@@ -1475,8 +1486,8 @@ var PS = {};
                   return Data_Semigroup.append(Data_Semigroup.semigroupArray)(ar)([ Data_Maybe.fromMaybe(0.0)(Data_Number.fromString(s)) ]);
               };
           })([  ])(Data_String.split(", ")(Data_Maybe.fromMaybe("")(Data_String.stripSuffix(")")(Data_Maybe.fromMaybe("")(Data_String.stripPrefix("matrix3d(")(str))))));
-          var $12 = Data_Array.length(a) !== 16;
-          if ($12) {
+          var $13 = Data_Array.length(a) !== 16;
+          if ($13) {
               return noTransformation;
           };
           return transformMatrix(a);
@@ -1516,35 +1527,40 @@ var PS = {};
           return LinearAlgebra_Matrix.multiply(v)(v1);
       };
   };
+  var changeSpeed = function (s) {
+      return function (v) {
+          var x = Data_Maybe.fromMaybe(0.0)(LinearAlgebra_Matrix.element(0)(0)(v));
+          var y = Data_Maybe.fromMaybe(0.0)(LinearAlgebra_Matrix.element(1)(0)(v));
+          var a = (function () {
+              var $21 = y === 0.0;
+              if ($21) {
+                  return 0.0;
+              };
+              var $22 = x === 0.0;
+              if ($22) {
+                  return $$Math.pi / 2.0;
+              };
+              return $$Math.atan($$Math.abs(y / x));
+          })();
+          return rotationVector([ s * $$Math.cos(a) * (function () {
+              var $23 = x < 0.0;
+              if ($23) {
+                  return -1.0;
+              };
+              return 1.0;
+          })(), s * $$Math.sin(a) * (function () {
+              var $24 = y < 0.0;
+              if ($24) {
+                  return -1.0;
+              };
+              return 1.0;
+          })(), 0.0, s ]);
+      };
+  };
   var average = function (vs) {
       var v = sum(vs);
-      var x = Data_Maybe.fromMaybe(0.0)(LinearAlgebra_Matrix.element(0)(0)(v));
-      var y = Data_Maybe.fromMaybe(0.0)(LinearAlgebra_Matrix.element(1)(0)(v));
-      var mag = Data_Maybe.fromMaybe(0.0)(LinearAlgebra_Matrix.element(3)(0)(v)) / Data_Int.toNumber(Data_Array.length(vs));
-      var a = (function () {
-          var $19 = y === 0.0;
-          if ($19) {
-              return 0.0;
-          };
-          var $20 = x === 0.0;
-          if ($20) {
-              return $$Math.pi / 2.0;
-          };
-          return $$Math.atan($$Math.abs(y / x));
-      })();
-      return rotationVector([ mag * $$Math.cos(a) * (function () {
-          var $21 = x < 0.0;
-          if ($21) {
-              return -1.0;
-          };
-          return 1.0;
-      })(), mag * $$Math.sin(a) * (function () {
-          var $22 = y < 0.0;
-          if ($22) {
-              return -1.0;
-          };
-          return 1.0;
-      })(), 0.0, mag ]);
+      var s = Data_Maybe.fromMaybe(0.0)(LinearAlgebra_Matrix.element(3)(0)(v)) / Data_Int.toNumber(Data_Array.length(vs));
+      return changeSpeed(s)(v);
   };
   var angle = function (v) {
       return Data_Maybe.fromMaybe(0.0)(LinearAlgebra_Matrix.element(3)(0)(v));
@@ -1552,6 +1568,7 @@ var PS = {};
   exports["MatrixToString"] = MatrixToString;
   exports["angle"] = angle;
   exports["average"] = average;
+  exports["changeSpeed"] = changeSpeed;
   exports["multiply"] = multiply;
   exports["noRotation"] = noRotation;
   exports["noTransformation"] = noTransformation;
@@ -1581,6 +1598,9 @@ var PS = {};
   var Data_EuclideanRing = PS["Data.EuclideanRing"];
   var Data_Function = PS["Data.Function"];
   var Data_Functor = PS["Data.Functor"];
+  var Data_HeytingAlgebra = PS["Data.HeytingAlgebra"];
+  var Data_Int = PS["Data.Int"];
+  var Data_Ord = PS["Data.Ord"];
   var Data_Ring = PS["Data.Ring"];
   var Data_Semigroup = PS["Data.Semigroup"];
   var Data_Semiring = PS["Data.Semiring"];
@@ -1630,69 +1650,13 @@ var PS = {};
           };
       };
   };
-  var startMouseHandlers = function (transformRef) {
-      return function (velocityRef) {
-          return function __do() {
-              var v = Control_Monad_Eff_JQuery.body();
-              var v1 = Control_Monad_ST.newSTRef({
-                  x: 0.0, 
-                  y: 0.0
-              })();
-              var downHandler = function (event) {
-                  return function (jq) {
-                      return function __do() {
-                          var v2 = Control_Monad_Eff_JQuery.getPageX(event)();
-                          var v3 = Control_Monad_Eff_JQuery.getPageY(event)();
-                          Data_Functor["void"](Control_Monad_Eff.functorEff)(Control_Monad_ST.writeSTRef(v1)({
-                              x: v2, 
-                              y: v3
-                          }))();
-                          var v4 = Control_Monad_ST.newSTRef(true)();
-                          Data_Functor["void"](Control_Monad_Eff.functorEff)(Control_Monad_ST.writeSTRef(velocityRef)(Matrices.noRotation))();
-                          var moveHandler = function (event$prime) {
-                              return function (jq$prime) {
-                                  return function __do() {
-                                      var v5 = Control_Monad_Eff_JQuery.getPageX(event$prime)();
-                                      var v6 = Control_Monad_Eff_JQuery.getPageY(event$prime)();
-                                      Data_Functor["void"](Control_Monad_Eff.functorEff)(Control_Monad_ST.writeSTRef(v1)({
-                                          x: v5, 
-                                          y: v6
-                                      }))();
-                                      var dx = -(v6 - v3);
-                                      var dy = v5 - v2;
-                                      var rotation = Matrices.rotationVector([ dx, dy, 0.0, $$Math.sqrt(dx * dx + dy * dy) * rotationScale ]);
-                                      return rotateCube(transformRef)(rotation)();
-                                  };
-                              };
-                          };
-                          var upHandler = function (event$prime) {
-                              return function (jq$prime) {
-                                  return function __do() {
-                                      var v5 = Control_Monad_Eff_JQuery.select(".cube")();
-                                      Control_Monad_Eff_JQuery.off("mousemove")(v)();
-                                      var v6 = Control_Monad_Eff_JQuery.getCss("transform")(v5)();
-                                      Data_Functor["void"](Control_Monad_Eff.functorEff)(Control_Monad_ST.writeSTRef(transformRef)(Matrices.toTransformMatrix(v6)))();
-                                      return Control_Monad_ST.writeSTRef(v4)(false)();
-                                  };
-                              };
-                          };
-                          Control_Monad_Eff_JQuery.on("mousemove")(moveHandler)(v)();
-                          Control_Monad_Eff_JQuery.on("mouseup")(upHandler)(v)();
-                          return startSpeedometer(velocityRef)(v1)(v4)();
-                      };
-                  };
-              };
-              return Control_Monad_Eff_JQuery.on("mousedown")(downHandler)(v)();
-          };
-      };
-  };
   var startSpinner = function (transformRef) {
       return function (velocityRef) {
           var spinner = function __do() {
               var v = Control_Monad_ST.readSTRef(velocityRef)();
               (function () {
-                  var $50 = Matrices.angle(v) !== 0.0;
-                  if ($50) {
+                  var $43 = Matrices.angle(v) !== 0.0;
+                  if ($43) {
                       return function __do() {
                           var v1 = rotateCube(transformRef)(v)();
                           return Data_Functor["void"](Control_Monad_Eff.functorEff)(Control_Monad_ST.writeSTRef(transformRef)(v1))();
@@ -1706,14 +1670,7 @@ var PS = {};
           return spinner;
       };
   };
-  var framesPerSecond = 60.0;
-  var run = function __do() {
-      var v = Control_Monad_ST.newSTRef(Matrices.noTransformation)();
-      var v1 = Control_Monad_ST.newSTRef(Matrices.rotationVector([ 0.0, -1.0, 0.0, 10.0 / framesPerSecond ]))();
-      startSpinner(v)(v1)();
-      startMouseHandlers(v)(v1)();
-      return Data_Unit.unit;
-  };
+  var framesPerSecond = 60;
   var drawCube = function __do() {
       var v = Control_Monad_Eff_JQuery.create("<div>")();
       Control_Monad_Eff_JQuery.setAttr("id")("front_face")(v)();
@@ -1792,10 +1749,91 @@ var PS = {};
           border: "solid black 3px"
       })(v9)();
   };
+  var decelRate = 20.0 / Data_Int.toNumber(framesPerSecond);
+  var startMouseHandlers = function (transformRef) {
+      return function (velocityRef) {
+          return function __do() {
+              var v = Control_Monad_Eff_JQuery.body();
+              var v1 = Control_Monad_ST.newSTRef({
+                  x: 0.0, 
+                  y: 0.0
+              })();
+              var downHandler = function (event) {
+                  return function (jq) {
+                      return function __do() {
+                          var v2 = Control_Monad_Eff_JQuery.getPageX(event)();
+                          var v3 = Control_Monad_Eff_JQuery.getPageY(event)();
+                          Data_Functor["void"](Control_Monad_Eff.functorEff)(Control_Monad_ST.writeSTRef(v1)({
+                              x: v2, 
+                              y: v3
+                          }))();
+                          var v4 = Control_Monad_ST.newSTRef(true)();
+                          var moveHandler = function (event$prime) {
+                              return function (jq$prime) {
+                                  return function __do() {
+                                      var v5 = Control_Monad_Eff_JQuery.getPageX(event$prime)();
+                                      var v6 = Control_Monad_Eff_JQuery.getPageY(event$prime)();
+                                      Data_Functor["void"](Control_Monad_Eff.functorEff)(Control_Monad_ST.writeSTRef(v1)({
+                                          x: v5, 
+                                          y: v6
+                                      }))();
+                                      var dx = -(v6 - v3);
+                                      var dy = v5 - v2;
+                                      var rotation = Matrices.rotationVector([ dx, dy, 0.0, $$Math.sqrt(dx * dx + dy * dy) * rotationScale ]);
+                                      return rotateCube(transformRef)(rotation)();
+                                  };
+                              };
+                          };
+                          var upHandler = function (event$prime) {
+                              return function (jq$prime) {
+                                  return function __do() {
+                                      var v5 = Control_Monad_Eff_JQuery.select(".cube")();
+                                      Control_Monad_Eff_JQuery.off("mousemove")(v)();
+                                      var v6 = Control_Monad_Eff_JQuery.getCss("transform")(v5)();
+                                      Data_Functor["void"](Control_Monad_Eff.functorEff)(Control_Monad_ST.writeSTRef(transformRef)(Matrices.toTransformMatrix(v6)))();
+                                      return Control_Monad_ST.writeSTRef(v4)(false)();
+                                  };
+                              };
+                          };
+                          var decelerator = function __do() {
+                              var v5 = Control_Monad_ST.readSTRef(velocityRef)();
+                              var v7 = Control_Monad_ST.readSTRef(v4)();
+                              var $67 = v7 && Matrices.angle(v5) > 0.0;
+                              if ($67) {
+                                  Data_Functor["void"](Control_Monad_Eff.functorEff)(Control_Monad_ST.writeSTRef(velocityRef)((function () {
+                                      var $68 = Matrices.angle(v5) - decelRate > 0.0;
+                                      if ($68) {
+                                          return Matrices.changeSpeed(Matrices.angle(v5) - decelRate)(v5);
+                                      };
+                                      return Matrices.noRotation;
+                                  })()))();
+                                  return Data_Functor["void"](Control_Monad_Eff.functorEff)(Control_Monad_Eff_Timer.setTimeout(1000 / framesPerSecond | 0)(decelerator))();
+                              };
+                              return Data_Unit.unit;
+                          };
+                          Control_Monad_Eff_JQuery.on("mousemove")(moveHandler)(v)();
+                          Control_Monad_Eff_JQuery.on("mouseup")(upHandler)(v)();
+                          decelerator();
+                          return startSpeedometer(velocityRef)(v1)(v4)();
+                      };
+                  };
+              };
+              return Control_Monad_Eff_JQuery.on("mousedown")(downHandler)(v)();
+          };
+      };
+  };
+  var run = function __do() {
+      var v = Control_Monad_ST.newSTRef(Matrices.noTransformation)();
+      var v1 = Control_Monad_ST.newSTRef(Matrices.noRotation)();
+      startSpinner(v)(v1)();
+      startMouseHandlers(v)(v1)();
+      return Data_Unit.unit;
+  };
   var main = function __do() {
       drawCube();
       return run();
   };
+  exports["decelRate"] = decelRate;
   exports["drawCube"] = drawCube;
   exports["framesPerSecond"] = framesPerSecond;
   exports["main"] = main;

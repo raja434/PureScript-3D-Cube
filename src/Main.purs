@@ -13,19 +13,23 @@ import DOM.HTML (window)
 import DOM.HTML.Window (requestAnimationFrame)
 import Data.Array (replicate, snoc)
 import Data.Array.Partial (tail)
+import Data.Int (toNumber)
 import Math (sqrt)
-import Matrices (RotationVector, TransformMatrix, angle, average, multiply, noRotation, noTransformation, rotationVector, sum, toString, toTransformMatrix)
+import Matrices (RotationVector, TransformMatrix, angle, average, changeSpeed, multiply, noRotation, noTransformation, rotationVector, sum, toString, toTransformMatrix)
 import Partial.Unsafe (unsafePartial)
 
 
-framesPerSecond :: Number
-framesPerSecond = 60.0
+framesPerSecond :: Int
+framesPerSecond = 60
 
 speedSensitivity :: Int
 speedSensitivity = 25
 
 rotationScale :: Number
 rotationScale = 0.4
+
+decelRate :: Number
+decelRate = 20.0 / toNumber framesPerSecond
 
 
 drawCube :: forall e. Eff (dom :: DOM |e) Unit
@@ -168,7 +172,6 @@ startMouseHandlers transformRef velocityRef = do
         downY <- getPageY event
         void $ writeSTRef mousePosRef {x: downX, y:downY}
         runFlagRef <- newSTRef true
-        void $ writeSTRef velocityRef noRotation
         let moveHandler event' jq' = do
               x <- getPageX event'
               y <- getPageY event'
@@ -184,8 +187,17 @@ startMouseHandlers transformRef velocityRef = do
               t <- getCss "transform" cube
               void $ writeSTRef transformRef (toTransformMatrix t)
               writeSTRef runFlagRef false
+        let decelerator = do
+              v <- readSTRef velocityRef
+              runFlag <- readSTRef runFlagRef
+              if runFlag && angle v > 0.0 then do
+                void $ writeSTRef velocityRef $
+                  if (angle v - decelRate > 0.0) then changeSpeed (angle v - decelRate) v else noRotation
+                void $ setTimeout (1000 / framesPerSecond) decelerator
+                else pure unit
         on "mousemove" moveHandler body
         on "mouseup" upHandler body
+        decelerator
         startSpeedometer velocityRef mousePosRef runFlagRef
   on "mousedown" downHandler body
 
@@ -209,7 +221,7 @@ startSpinner transformRef velocityRef = do
 run :: forall e h. Eff (dom :: DOM, st :: ST h, timer :: TIMER, console :: CONSOLE | e) Unit
 run = do
   transformRef <- newSTRef noTransformation
-  velocityRef <- newSTRef (rotationVector [0.0,-1.0,0.0,10.0/framesPerSecond])
+  velocityRef <- newSTRef noRotation
   startSpinner transformRef velocityRef
   startMouseHandlers transformRef velocityRef
   pure unit
